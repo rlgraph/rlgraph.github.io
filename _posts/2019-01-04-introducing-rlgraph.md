@@ -4,6 +4,7 @@ title:  "RLgraph: A unified interface for design and execution of RL algorithms"
 date:   2019-01-04 14:41:37 +0100
 categories: rlgraph
 ---
+# RLgraph: A unified interface for design and execution of RL algorithms
 We introduce RLgraph, a RL framework decoupling logical component composition from deep learning backend and distributed execution. 
 
 Using RLgraph, users combine high level components in a space-independent manner and define input spaces. RLgraph then builds a backend-independent component graph which can be translated to a TensorFlow computation graph, or executed in define by run mode via PyTorch (1.0+).
