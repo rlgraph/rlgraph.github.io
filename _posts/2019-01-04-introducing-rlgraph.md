@@ -4,29 +4,31 @@ title:  "RLgraph: A unified interface for design and execution of RL algorithms"
 date:   2019-01-04 14:41:37 +0100
 categories: rlgraph
 ---
-# RLgraph: A unified interface for design and execution of RL algorithms
-We introduce RLgraph, a RL framework decoupling logical component composition from deep learning backend and distributed execution. 
+# RLgraph: Robust, incrementally testable reinforcement learning
 
-Using RLgraph, users combine high level components in a space-independent manner and define input spaces. RLgraph then builds a backend-independent component graph which can be translated to a TensorFlow computation graph, or executed in define by run mode via PyTorch (1.0+).
+We introduce RLgraph, a RL framework decoupling logical component composition from deep learning backend and distributed execution. RLgraph brings rigorous management of internal and external state, inputs, devices, and dataflow to reinforcement learning.
 
- The resulting agents can be trained locally embedded in an application like any other library (e.g. numpy), or using backends such as distributed TensorFlow, Ray, and Horovod. 
+Using RLgraph, developers combine high level components in a space-independent manner and define input spaces. RLgraph then builds a backend-independent component graph which can be translated to a TensorFlow computation graph, or executed in define by run mode via PyTorch (1.0+).
+
+The resulting agents can be trained locally embedded in an application like any other library (e.g. numpy), or using backends such as distributed TensorFlow, Ray, and Horovod. RLgraph currently implements variants of contemporary methods such as SAC, IMPALA, APE-X, PPO.
 
 ![RLgraph stack]({{ site.url }}/images/rlgraph_stack.png)
 
-This design has numerous advantages compared to many existing libraries:
+This design has numerous advantages compared to many existing libraries which struggle to resolve the tension between prototyping, reusability across backends, and scalable execution:
 
-- Each component can be built and tested as its own graph - being able to systematically test arbitrary sub-graphs of complex algorithms drastically accelerates debugging and prototyping. Think of components as Sonnet-style objects but including API and device management, build system, separation of variable creation and computation logic.
-- Backend and space-independent high-level logic enables fast exploration of new designs.
-- Future-proof: Developers can decide on a per-model basis which backend to use to access specific framework features. Components can plug into any external library (e.g. TRFL).
+- Each component can be built and tested as its own graph - being able to systematically test arbitrary sub-graphs of complex algorithms drastically accelerates debugging and prototyping. Think of components as Sonnet-style objects but including API and device management, build system, separation of variable creation and computation logic. 
+- Backend and space-independent high-level logic enables faster exploration of new designs.
 - Scalability: RLgraph agents can be arbitrarily executed e.g. on Ray using our Ray execution package, using distributed TensorFlow to explore end-to-end graphs, or using any distribution mechanism of choice. 
+- Maintenance: Extending existing frameworks often means either duplicating large amounts of code or intransparently piling on new learning heuristics into a single implementation. Neither is desirable. In RLgraph, heuristics are first-class citizens which are separately built and tested.
 - No platform lock-in: The component graph is discarded after building for a specific backend, and models can be exported to framework specific standard formats.
+
+Overall, RLgraph targets a very specific and opinionated trade-off between enforcing strict interfaces and a rigorous build system, and exploration of new designs. Specifically, RLgraph is a framework meant for users that need to execute their research in practice in all kinds of deployment contexts. RLgraph is also meant to provide a simple plug and play high level API (see below).
 
 ## Architecture
 
 Users interact with RLgraph agents through a front-end agent API very similar to TensorForce (which some of us also created/worked on). Internally, agents rely on a graph executor which serves requests against the component graph and manages backend-specific execution semantics. For example,the TensorFlowExecutor handles sessions, devices, summaries, placeholders, profiling, distributed TF servers, and timelines. The PyTorch executor in turn manages default tensor types, devices, or external plugins such as Horovod.
 
 ![RLgraph execution]({{ site.url }}/images/rlgraph_graph_execution.png)
-
 
 This agent can be executed on external engines (e.g. using RLgraph's ```RayExecutors```) or be used like any other object in an application. 
 
@@ -55,10 +57,9 @@ actions = Dict(
 
 # Create PPO agent
 agent = Agent.from_spec(
-	# TODO how much to show from config? Bloats screen.
-        agent_config,
-        state_space=env.state_space,
-        action_space=env.action_space
+    agent_config,
+    state_space=env.state_space,
+    action_space=env.action_space
 )
 
 # Use agent locally, control behaviour with flags.
@@ -70,7 +71,9 @@ agent.observe(states, actions, rewards, terminals, batched=True , env_id="env_3"
 # Updates by sampling from buffer after observing.
 loss = agent.update()
 
-# Update from an external batch which may contain arbitrary (non-terminal) sub-episode fragments from multiple environments, identified via sequence indices:
+# Update from an external batch which may contain 
+# arbitrary (non-terminal) sub-episode fragments from multiple environments,
+# identified via sequence indices:
 agent.update(batch=dict(states=states, actions=actions, rewards=rewards, terminals=terminals, sequence_indices=sequence_indices)
 
 # Single-threaded, vectorized execution. 
@@ -89,20 +92,11 @@ Full [example scripts](https://github.com/rlgraph/rlgraph/tree/master/examples) 
 
 ## Components
 
-Everything in RLgraph is a ```Component```. An agent is a component containing sub-components like memories, neural networks, loss functions, or optimizers. Components interact with each other through API functions which create data-flow between components. That is, using the TensorFlow backend, RLgraph creates end-to-end static graphs by stichting together API calls by tracing them during the build procedure. For example, below is a simple API method to request actions:
+Everything in RLgraph is a ```Component```. An agent implements an algorithm via a root component containing sub-components like memories, neural networks, loss functions, or optimizers. Components interact with each other through API functions which impliitly create data-flow between components. That is, using the TensorFlow backend, RLgraph creates end-to-end static graphs by stitching together API calls and tracing them during the build procedure. For example, below is a simple API method to request actions:
 
-```python
-# TODO not a good example because not clear why API necessary.
-@rlgraph_api(component=self.root_component)
-def action_from_preprocessed_state(self, preprocessed_states,
- 										  time_step=0, use_exploration=True):
- 	# Policy and exploration components expose API methods.
-    sample_deterministic = policy.get_deterministic_action(preprocessed_states)
-    actions = exploration.get_action(sample_deterministic["action"], time_step, use_exploration)
-    return preprocessed_states, actions
-```
+![RLgraph API example]({{ site.url }}/images/rlgraph_api_example.png)
 
-API method decorators wrap these functions to create end-to-end dataflow. RLgraph manages session, variablestates, devices, scopes, placeholders, nesting, time and batchranks for each component and its incoming and leaving dataflow.
+API method decorators wrap API functions to create end-to-end dataflow. RLgraph manages session, variable/internal states, devices, scopes, placeholders, nesting, time and batchranks for each component and its incoming and outgoing dataflow.
 
 This means we can build a component from a space and interact with it without needing to manually create tensors, input placeholders etc:
 
@@ -130,25 +124,35 @@ graph = ComponentTest(component=memory, input_spaces=input_spaces)
 observation = record_space.sample(size=32)
 
 # Calls session, fetches ops, prepares inputs, executes API method.
-graph.test(("insert_records", observation))
+graph.test(memory.insert_records, observation))
 
 # Get some samples providing the "num_records" int-arg.
-samples = graph.test(("get_records", 10))
+samples = graph.test((memory.insert_records, 10))
 ```
 
-Separating spaces of tensors from logical composition enables us to reuse components without ever manually dealing with incompatible shapes again. Note how the above code does not contain any framework-specific notions but only defines an input dataflow from a set of spaces. 
+Separating spaces of tensors from logical composition enables us to reuse components without ever manually dealing with incompatible shapes again. Note how the above code does not contain any framework-specific notions but only defines an input dataflow from a set of spaces. In RLgraph, heuristics (which often have great impact on performance in RL) are not afterthoughts but first class citizens which are tested both individually and in integration with other components. For example, the ```Policy``` component contains neural network, action adapter (and in turn layer and distribution) sub-components, all of which are tested separately.
 
-When composing components, the build process performs shape inference to detect how a component's API methods transform its input spaces so we can compute the correct inputs to the next component to ensure down-stream variables and placeholders have the correct shapes.
+The core difference between using RLgraph and standard implementation workflows is that every component is fully specified explicitly: Its devices and scopes for computations and internal states (e.g. variable sharing) are explicitly assigned which spares developers the headaches of nested context managers. As a result, RLgraph creates beautiful TensorBoard visualisations, e.g. our IMPALA implementation:
+impala_tboard_graph_learner.png
 
-In future blog-posts, we will show in more detail how to implement custom components and compotatuons, and how to plug in external libraries to prototype new algorithms with RLgraph.
+![RLgraph IMPALA tensorboard]({{ site.url }}/images/impala_tboard_graph_learner.png)
+
+Compare with DeepMind's open source IMPALA using Sonnet and nested context managers:
+
+<span class="image-scroll-container horizontal">
+![Deepmind scalable agent IMPALA tensorboard]({{ site.url }}/images/impala_tboard_graph_learner_deepmind.png){:.scroll}
+</span>
+
+In future blog-posts, we will show in more detail how to implement custom components and computations.
 
 ## Resources and road-map
 
-RLgraph is in alpha stage and is currently being piloted in various research projects. We welcome contributions and feedback. Over the next few months, we will keep building out utilities (additional Ray executors, better device management for PyTorch, ONNX integration and more), and implement more algorithms. Feel free to create issues discussing improvements.
+RLgraph is in alpha stage and is currently being piloted in various research projects. We welcome contributions and feedback. As RLgraph ambitiously covers multiple frameworks and backends, there is a lot to do on all ends.
+
+Over the next few months, we will keep building out utilities (TF 2.0 considerations, separation of backend code (specifically see pinned issues), additional Ray executors, ..), and implement more algorithms. Feel free to create issues discussing improvements.
 
 Code: Get started building applications with RLgraph: [https://github.com/rlgraph/rlgraph](https://github.com/rlgraph/rlgraph)
 
 Documentation: Docs are available on [readthedocs](https://rlgraph.readthedocs.io/en/latest/?badge=latest)
 
 Paper: Read our [paper](https://arxiv.org/abs/1810.09028) to learn more about RLgraph's design. 
-
