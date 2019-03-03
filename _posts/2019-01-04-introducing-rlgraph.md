@@ -6,7 +6,7 @@ categories: rlgraph
 ---
 # RLgraph: Robust, incrementally testable reinforcement learning
 
-We introduce RLgraph, a RL framework decoupling logical component composition from deep learning backend and distributed execution. RLgraph brings rigorous management of internal and external state, inputs, devices, and dataflow to reinforcement learning.
+We introduce RLgraph ([GitHub repo](https://github.com/rlgraph/rlgraph)), a RL framework decoupling logical component composition from deep learning backend and distributed execution. RLgraph brings rigorous management of internal and external state, inputs, devices, and dataflow to reinforcement learning.
 
 ![APEX learning on multiple GPUs]({{ site.url }}/images/learning_combined.png)
 <span class="caption"><strong>Left:</strong> Soft Actor Critic on Pendulum-v0 (10 seeds). <strong>Right:</strong> Multi-GPU Ape-X on Pong-v0 (10 seeds).</span>
@@ -137,12 +137,6 @@ Separating spaces of tensors from logical composition enables us to reuse compon
 The core difference between using RLgraph and standard implementation workflows is that every component is fully specified explicitly: Its devices and scopes for computations and internal states (e.g. variable sharing) are explicitly assigned which spares developers the headaches of nested context managers. As a result, RLgraph creates beautiful TensorBoard visualisations, e.g. our IMPALA implementation:
 
 ![RLgraph IMPALA tensorboard]({{ site.url }}/images/impala_tboard_graph_learner.png)
-
-Compare with DeepMind's open source IMPALA using Sonnet and nested context managers:
-
-<span class="image-scroll-container horizontal">
-![Deepmind scalable agent IMPALA tensorboard]({{ site.url }}/images/impala_tboard_graph_learner_deepmind.png){:.scroll}
-</span>
 
 
 ## Resources and call for contributions

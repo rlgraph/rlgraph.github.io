@@ -3,4 +3,4 @@ theme: jekyll-theme-slate
 github:
   repository_url: https://github.com/rlgraph/rlgraph
   repository_name: RLgraph
-  project_tagline: Flexible computation graphs for deep reinforcement learning
+  project_tagline: Modular computation graphs for deep reinforcement learning
