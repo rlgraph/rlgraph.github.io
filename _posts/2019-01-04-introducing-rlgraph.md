@@ -9,7 +9,7 @@ categories: rlgraph
 We introduce RLgraph, a RL framework decoupling logical component composition from deep learning backend and distributed execution. RLgraph brings rigorous management of internal and external state, inputs, devices, and dataflow to reinforcement learning.
 
 ![APEX learning on multiple GPUs]({{ site.url }}/images/learning_combined.png)
-<span class="caption">Left: Soft Actor Critic on Pendulum-v0 (10 seeds). Right: Multi-GPU Ape-X on Pong-v0 (10 seeds).</span>
+<span class="caption"><strong>Left:</strong> Soft Actor Critic on Pendulum-v0 (10 seeds). <strong>Right:</strong> Multi-GPU Ape-X on Pong-v0 (10 seeds).</span>
 
 Using RLgraph, developers combine high level components in a space-independent manner and define input spaces. RLgraph then builds a backend-independent component graph which can be translated to a TensorFlow computation graph, or executed in define by run mode via PyTorch (1.0+).
 
