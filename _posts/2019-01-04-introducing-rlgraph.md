@@ -1,6 +1,6 @@
 ---
 layout: default
-title:  "RLgraph: A unified interface for design and execution of RL algorithms"
+title:  "RLgraph: Robust, incrementally testable reinforcement learning"
 date:   2019-01-04 14:41:37 +0100
 categories: rlgraph
 ---
